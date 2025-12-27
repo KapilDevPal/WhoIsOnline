@@ -21,6 +21,9 @@ module WhoIsOnline
 
     initializer "whoisonline.helpers" do
       ActiveSupport.on_load(:action_view) do
+        # Explicitly require the helper module from app directory
+        helper_path = File.join(Engine.root, "app", "helpers", "whoisonline", "application_helper.rb")
+        require helper_path if File.exist?(helper_path)
         include WhoIsOnline::ApplicationHelper
       end
     end
