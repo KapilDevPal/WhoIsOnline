@@ -21,10 +21,10 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob("lib/**/*") + %w[README.md logowho.png]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "activesupport", ">= 7.0"
-  spec.add_dependency "railties", ">= 7.0"
-  spec.add_dependency "redis", ">= 4.0"
-  spec.add_dependency "concurrent-ruby", ">= 1.2"
+  spec.add_dependency "activesupport", "~> 7.0"
+  spec.add_dependency "railties", "~> 7.0"
+  spec.add_dependency "redis", "~> 4.0"
+  spec.add_dependency "concurrent-ruby", "~> 1.2"
 end
 
 
