@@ -15,6 +15,7 @@ module WhoIsOnline
     initializer "whoisonline.routes" do |app|
       app.routes.append do
         post "/whoisonline/offline", to: "whoisonline/presence#offline", as: :whoisonline_offline
+        post "/whoisonline/heartbeat", to: "whoisonline/presence#heartbeat", as: :whoisonline_heartbeat
       end
     end
 
