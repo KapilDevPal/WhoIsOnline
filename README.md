@@ -6,6 +6,7 @@ Track "who is online right now?" in Rails 7+ using Redis TTL. No database writes
 - Rails Engine auto-includes a controller concern to mark users online.
 - Works with `current_user` from any auth system (Devise, custom, etc.).
 - TTL-based presence in Redis, no tables required.
+- **Automatic offline detection** when users close their browser/tab.
 - Throttled Redis writes to reduce load (configurable).
 - Safe SCAN-based counting; no `KEYS`.
 - Configurable Redis client, TTL, throttle duration, user id method, controller accessor, and namespace.
@@ -35,10 +36,19 @@ WhoIsOnline.configure do |config|
 end
 ```
 
-The engine auto-adds a concern that runs after each controller action to mark the `current_user` as online. Nothing else is required.
+The engine auto-adds a concern that runs after each controller action to mark the `current_user` as online.
+
+**To enable offline detection when users close their browser**, add this to your main layout (e.g., `app/views/layouts/application.html.erb`):
+
+```erb
+<%= whoisonline_offline_script %>
+```
+
+This will automatically mark users offline when they close the browser/tab.
 
 ## Public API
 - `WhoIsOnline.track(user)` – mark a user online (auto-called by the controller concern).
+- `WhoIsOnline.offline(user)` – mark a user offline immediately.
 - `WhoIsOnline.online?(user)` – boolean.
 - `WhoIsOnline.count` – number of online users (via SCAN).
 - `WhoIsOnline.user_ids` – array of ids (strings by default).
@@ -69,6 +79,9 @@ end
 # Somewhere in your controller you can also call manually:
 WhoIsOnline.track(current_user)
 
+# Mark user offline (e.g., on logout)
+WhoIsOnline.offline(current_user)
+
 # In a background job
 if WhoIsOnline.online?(user)
   # notify
@@ -77,6 +90,23 @@ end
 # In a dashboard
 @online_users = WhoIsOnline.users(User).order(last_sign_in_at: :desc)
 @online_count = WhoIsOnline.count
+```
+
+### Layout Example
+In your main layout (`app/views/layouts/application.html.erb`):
+
+```erb
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My App</title>
+    <%= csrf_meta_tags %>
+  </head>
+  <body>
+    <%= yield %>
+    <%= whoisonline_offline_script %>
+  </body>
+</html>
 ```
 
 ## Extensibility

@@ -10,7 +10,7 @@ require_relative "whoisonline/engine"
 
 module WhoIsOnline
   class << self
-    delegate :track, :online?, :count, :user_ids, :users, to: :tracker
+    delegate :track, :offline, :online?, :count, :user_ids, :users, to: :tracker
 
     def tracker
       @_tracker ||= Tracker.new(configuration, redis_store)

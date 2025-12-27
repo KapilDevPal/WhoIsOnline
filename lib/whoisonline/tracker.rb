@@ -19,6 +19,15 @@ module WhoIsOnline
       @last_write_by_user[uid] = Time.now if result
     end
 
+    def offline(user)
+      uid = extract_id(user)
+      return unless uid
+
+      key = presence_key(uid)
+      @redis_store.delete_presence(key)
+      @last_write_by_user.delete(uid)
+    end
+
     def online?(user)
       uid = extract_id(user)
       return false unless uid

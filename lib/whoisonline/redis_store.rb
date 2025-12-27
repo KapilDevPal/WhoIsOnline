@@ -33,6 +33,13 @@ module WhoIsOnline
       []
     end
 
+    def delete_presence(key)
+      connection.del(key)
+    rescue StandardError => e
+      log(:warn, "whoisonline delete failed: #{e.class} #{e.message}")
+      nil
+    end
+
     private
 
     def log(level, message)
