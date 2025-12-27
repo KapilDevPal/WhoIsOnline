@@ -3,15 +3,14 @@
 Track "who is online right now?" in Rails 7+ using Redis TTL. No database writes, production-safe, and auto-hooks into controllers via a Rails Engine.
 
 ## Features
-- **Activity-based tracking** - Only shows users online when the app is actively in use (page visible and active).
+- Rails Engine auto-includes a controller concern to mark users online.
 - Works with `current_user` from any auth system (Devise, custom, etc.).
 - TTL-based presence in Redis, no tables required.
-- **Automatic offline detection** when users close their browser/tab or switch to another tab.
-- Uses Page Visibility API to detect when app is in background.
-- Periodic heartbeats keep users online only when page is visible.
+- **Automatic offline detection** when users close their browser/tab.
+- **Visible-only heartbeats**: only ping while the tab is visible/active (configurable interval).
 - Throttled Redis writes to reduce load (configurable).
 - Safe SCAN-based counting; no `KEYS`.
-- Configurable Redis client, TTL, throttle duration, user id method, controller accessor, and namespace.
+- Configurable Redis client, TTL, throttle duration, user id method, controller accessor, namespace, and heartbeat interval.
 
 ## Installation
 Add to your Gemfile:
@@ -32,25 +31,23 @@ Create an initializer `config/initializers/whoisonline.rb`:
 ```ruby
 WhoIsOnline.configure do |config|
   config.redis = -> { Redis.new(url: ENV.fetch("REDIS_URL")) }
-  config.ttl = 90.seconds  # Users drop off after 90 seconds of inactivity
-  config.throttle = 30.seconds  # Allow frequent updates for activity tracking
+  config.ttl = 5.minutes
+  config.throttle = 60.seconds
   config.user_id_method = :id
-  config.activity_only = true  # Only track when app is actively in use (default: true)
-  config.heartbeat_interval = 30.seconds  # Send heartbeat every 30 seconds when active
+  config.heartbeat_interval = 60.seconds # client heartbeat when tab visible
 end
 ```
 
-**Add the activity tracking script to your main layout** (e.g., `app/views/layouts/application.html.erb`):
+The engine auto-adds a concern that runs after each controller action to mark the `current_user` as online.
+
+**To enable offline detection when users close their browser**, add this to your main layout (e.g., `app/views/layouts/application.html.erb`):
 
 ```erb
 <%= whoisonline_offline_script %>
 ```
 
-This will:
-- Track users as online only when the page is visible and active
-- Send periodic heartbeats (every 30 seconds) to keep users online
-- Automatically mark users offline when they switch tabs or close the browser
-- Uses Page Visibility API to detect when app is in background
+This will automatically mark users offline when they close the browser/tab.
+Heartbeats run only when the tab is visible/active (interval: `heartbeat_interval`, default 60s), keeping the user online without constant polling.
 
 ## Public API
 - `WhoIsOnline.track(user)` – mark a user online (auto-called by the controller concern).
@@ -64,23 +61,16 @@ This will:
 ```ruby
 WhoIsOnline.configure do |config|
   config.redis = -> { Redis.new(url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/0")) }
-  config.ttl = 90.seconds           # how long a user stays online without activity (default: 90s)
-  config.throttle = 30.seconds     # minimum time between Redis writes per user (default: 30s)
+  config.ttl = 5.minutes           # how long a user stays online without activity
+  config.throttle = 60.seconds     # minimum time between Redis writes per user
   config.user_id_method = :id      # how to pull an ID from the user object
   config.current_user_method = :current_user # method on controllers
+  config.heartbeat_interval = 60.seconds # heartbeat frequency while tab visible
   config.namespace = "whoisonline:user"
-  config.activity_only = true      # only track when app is actively in use (default: true)
-  config.heartbeat_interval = 30.seconds  # heartbeat frequency when active (default: 30s)
-  config.auto_hook = false         # disable controller auto-hook when using activity_only (default: false)
+  config.auto_hook = true          # disable if you prefer manual tracking
   config.logger = Rails.logger if defined?(Rails)
 end
 ```
-
-**Key Settings:**
-- `activity_only = true` - Only shows users online when page is visible/active (recommended)
-- `ttl = 90.seconds` - Users drop off quickly when inactive (shorter = more accurate)
-- `heartbeat_interval = 30.seconds` - How often to send heartbeats when active
-- `auto_hook = false` - Disabled by default when using activity tracking (set to `true` if you want both)
 
 ## Performance Notes
 - Uses `SET key value EX ttl` for O(1) writes.

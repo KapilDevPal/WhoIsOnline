@@ -1,12 +1,12 @@
 module WhoIsOnline
   module ApplicationHelper
     def whoisonline_offline_script
-      return unless WhoIsOnline.configuration.activity_only
+      return unless WhoIsOnline.configuration.auto_hook
 
       offline_url = whoisonline_offline_path
       heartbeat_url = whoisonline_heartbeat_path
       csrf_token = form_authenticity_token
-      heartbeat_interval = (WhoIsOnline.configuration.heartbeat_interval.to_i * 1000) || 30000
+      interval_ms = WhoIsOnline.configuration.heartbeat_interval.to_i * 1000
 
       javascript_tag do
         <<~JS.html_safe
@@ -15,44 +15,32 @@ module WhoIsOnline
             var offlineUrl = '#{offline_url}';
             var heartbeatUrl = '#{heartbeat_url}';
             var csrfToken = '#{csrf_token}';
-            var heartbeatInterval = #{heartbeat_interval};
-            var heartbeatTimer = null;
-            var isPageVisible = true;
+            var intervalMs = #{interval_ms};
+            var timer = null;
             var isNavigating = false;
 
-            // Check if page is visible using Page Visibility API
-            function isVisible() {
-              if (typeof document.hidden !== 'undefined') {
-                return !document.hidden;
-              }
-              if (typeof document.webkitHidden !== 'undefined') {
-                return !document.webkitHidden;
-              }
-              if (typeof document.mozHidden !== 'undefined') {
-                return !document.mozHidden;
-              }
-              return true; // Fallback: assume visible
-            }
-
-            // Send heartbeat to keep user online
-            function sendHeartbeat() {
-              if (!isPageVisible || isNavigating) return;
-
-              if (navigator.sendBeacon) {
-                var formData = new FormData();
-                formData.append('authenticity_token', csrfToken);
-                navigator.sendBeacon(heartbeatUrl, formData);
-              } else {
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', heartbeatUrl, true);
-                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
-                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                xhr.send('authenticity_token=' + encodeURIComponent(csrfToken));
+            function post(url, keepalive) {
+              try {
+                return fetch(url, {
+                  method: "POST",
+                  headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-Token": csrfToken,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                  },
+                  body: "authenticity_token=" + encodeURIComponent(csrfToken),
+                  keepalive: !!keepalive
+                });
+              } catch(e) {
+                return;
               }
             }
 
-            // Mark user offline
+            function heartbeat() {
+              if (document.hidden || isNavigating) return;
+              post(heartbeatUrl, true);
+            }
+
             function markOffline() {
               if (isNavigating) return;
               
@@ -73,34 +61,28 @@ module WhoIsOnline
               }
             }
 
-            // Start/stop heartbeat based on page visibility
-            function handleVisibilityChange() {
-              isPageVisible = isVisible();
-              
-              if (isPageVisible) {
-                // Page became visible - start heartbeat
-                sendHeartbeat(); // Send immediately
-                startHeartbeat();
-              } else {
-                // Page became hidden - stop heartbeat and mark offline
-                stopHeartbeat();
-                markOffline();
-              }
-            }
-
             function startHeartbeat() {
-              stopHeartbeat(); // Clear any existing timer
-              heartbeatTimer = setInterval(sendHeartbeat, heartbeatInterval);
+              if (timer) return;
+              heartbeat();
+              timer = setInterval(heartbeat, intervalMs);
             }
 
             function stopHeartbeat() {
-              if (heartbeatTimer) {
-                clearInterval(heartbeatTimer);
-                heartbeatTimer = null;
+              if (timer) {
+                clearInterval(timer);
+                timer = null;
               }
             }
 
-            // Track navigation to avoid double-triggering
+            document.addEventListener('visibilitychange', function() {
+              if (document.hidden) {
+                stopHeartbeat();
+                markOffline();
+              } else {
+                startHeartbeat();
+              }
+            });
+
             document.addEventListener('click', function(e) {
               var link = e.target.closest('a');
               if (link && link.href && !link.target) {
@@ -108,49 +90,22 @@ module WhoIsOnline
               }
             }, true);
 
-            // Page Visibility API events
-            document.addEventListener('visibilitychange', handleVisibilityChange);
-            
-            // Fallback for older browsers
-            window.addEventListener('focus', function() {
-              isPageVisible = true;
-              sendHeartbeat();
-              startHeartbeat();
-            });
-            
-            window.addEventListener('blur', function() {
-              isPageVisible = false;
-              stopHeartbeat();
-              markOffline();
-            });
-
-            // Mark offline on page unload
             window.addEventListener('beforeunload', function() {
               stopHeartbeat();
               markOffline();
             });
-            
             window.addEventListener('pagehide', function() {
               stopHeartbeat();
               markOffline();
             });
 
-            // Reset navigation flag and start heartbeat when page shows
             window.addEventListener('pageshow', function() {
               setTimeout(function() {
                 isNavigating = false;
-                if (isVisible()) {
-                  sendHeartbeat();
-                  startHeartbeat();
-                }
               }, 100);
             });
 
-            // Start heartbeat if page is visible on load
-            if (isVisible()) {
-              sendHeartbeat(); // Send immediately on page load
-              startHeartbeat();
-            }
+            if (!document.hidden) startHeartbeat();
           })();
         JS
       end

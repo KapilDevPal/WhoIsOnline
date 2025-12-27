@@ -4,7 +4,7 @@ module WhoIsOnline
   class PresenceController < ActionController::Base
     # Skip CSRF for sendBeacon requests (they may not include CSRF token reliably)
     skip_before_action :verify_authenticity_token, raise: false
-    protect_from_forgery with: :null_session, only: [:offline, :heartbeat]
+    protect_from_forgery with: :null_session, only: [:offline]
 
     def offline
       user = resolve_whoisonline_user
