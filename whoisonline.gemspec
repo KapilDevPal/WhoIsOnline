@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Kapil Dev Pal"]
   spec.email         = ["dev.kapildevpal@gmail.com"]
   spec.summary       = "Redis-backed online presence for Rails without database writes"
-  spec.description   = "Production-ready Rails 7/8 online presence tracking using Redis TTL and controller auto-hook."
+  spec.description   = "Production-ready Rails 7+ online presence tracking using Redis TTL and controller auto-hook."
   spec.homepage      = "https://github.com/KapilDevPal/WhoIsOnline"
   spec.license       = "MIT"
 
@@ -21,10 +21,10 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob("lib/**/*") + %w[README.md logowho.png]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "activesupport", "~> 7.0"
-  spec.add_dependency "railties", "~> 7.0"
-  spec.add_dependency "redis", "~> 4.0"
-  spec.add_dependency "concurrent-ruby", "~> 1.2"
+  spec.add_dependency "activesupport", ">= 7.0"
+  spec.add_dependency "railties", ">= 7.0"
+  spec.add_dependency "redis", ">= 4.0"
+  spec.add_dependency "concurrent-ruby", ">= 1.2"
 end
 
 

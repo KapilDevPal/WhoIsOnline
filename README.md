@@ -1,6 +1,6 @@
 # WhoIsOnline
 
-Track “who is online right now?” in Rails 7/8 using Redis TTL. No database writes, production-safe, and auto-hooks into controllers via a Rails Engine.
+Track "who is online right now?" in Rails 7+ using Redis TTL. No database writes, production-safe, and auto-hooks into controllers via a Rails Engine.
 
 ## Features
 - Rails Engine auto-includes a controller concern to mark users online.
