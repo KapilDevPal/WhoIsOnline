@@ -14,7 +14,7 @@ Track "who is online right now?" in Rails 7+ using Redis TTL. No database writes
 Add to your Gemfile:
 
 ```ruby
-gem "whoisonline", github: "rails-to-rescue/whoisonline"
+gem "whoisonline", github: "KapilDevPal/WhoIsOnline"
 ```
 
 Or install directly:
