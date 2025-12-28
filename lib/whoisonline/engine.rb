@@ -6,6 +6,12 @@ module WhoIsOnline
   class Engine < ::Rails::Engine
     isolate_namespace WhoIsOnline
 
+    # Load helper before initializers run (for Zeitwerk compatibility)
+    config.to_prepare do
+      helper_path = File.expand_path("../../app/helpers/whoisonline/application_helper", __FILE__)
+      require helper_path if File.exist?(helper_path)
+    end
+
     initializer "whoisonline.controller" do
       ActiveSupport.on_load(:action_controller) do
         include WhoIsOnline::Controller
@@ -21,10 +27,10 @@ module WhoIsOnline
 
     initializer "whoisonline.helpers" do
       ActiveSupport.on_load(:action_view) do
-        # Explicitly require the helper module from app directory
-        helper_path = File.join(Engine.root, "app", "helpers", "whoisonline", "application_helper.rb")
-        require helper_path if File.exist?(helper_path)
-        include WhoIsOnline::ApplicationHelper
+        # Helper should already be loaded via config.to_prepare
+        if defined?(WhoIsOnline::ApplicationHelper)
+          include WhoIsOnline::ApplicationHelper
+        end
       end
     end
   end
